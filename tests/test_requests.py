@@ -82,7 +82,7 @@ except AttributeError:
 
 
 class TestRequests:
-    digest_auth_algo = ("MD5", "SHA-256", "SHA-512")
+    digest_auth_algo = ("MD5", "SHA", "SHA-256", "SHA-512")
 
     def test_entry_points(self):
         requests.session
@@ -761,6 +761,21 @@ class TestRequests:
             s.auth = HTTPDigestAuth("user", "pass")
             r = s.get(url)
             assert r.status_code == 200
+
+    def test_DIGEST_AUTH_INCLUDES_QUERY_STRING(self):
+        auth = HTTPDigestAuth("user", "pass")
+        auth.init_per_thread_state()
+        auth._thread_local.chal = {
+            "realm": "test-realm",
+            "nonce": "test-nonce",
+            "algorithm": "SHA",
+            "qop": "auth",
+        }
+
+        url = "http://example.com/protected?name=betsy&role=admin"
+        header = auth.build_digest_header("GET", url)
+
+        assert 'uri="/protected?name=betsy&role=admin"' in header
 
     def test_DIGEST_AUTH_RETURNS_COOKIE(self, httpbin):
         for authtype in self.digest_auth_algo:
